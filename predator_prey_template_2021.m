@@ -246,14 +246,14 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
 
     %
     if (amiapredator)
-    % Code to compute the force to be applied to the predator
+        % Code to compute the force to be applied to the predator
 
-    F = Frmax*[0;1];
+        F = Frmax*[0;1];
  
     else
-    % Code to compute the force to be applied to the prey
+        % Code to compute the force to be applied to the prey
 
-    F = Fymax*[0;1];
+        F = Fymax*[0;1];
     
     
     end
