@@ -12,7 +12,7 @@ function predator_prey
    force_table_prey = rand(51,2)-0.5;
    force_table_predator = rand(51,2)-0.5;
 
-   options = odeset('Events',@event,'RelTol',0.001);
+   options = odeset('Events',@event,'RelTol',0.005);
    
    initial_w = [500,0,0,0,0,0,0,0,Initial_fuel_r,Initial_fuel_y]; % Initial position/velocity/energy  
    
@@ -88,8 +88,6 @@ function dwdt = eom(t,w,force_table_predator,force_table_prey)
     if (Frmag>Frmax)
         Fr=Fr*Frmax/Frmag;
     end
- 
-
     if (Er<=0)  % Out of fuel!
         Fr = [0;0];
     end
@@ -109,28 +107,35 @@ function dwdt = eom(t,w,force_table_predator,force_table_prey)
     % Write similar code below to call your compute_f_groupname function to
     % compute the force on the prey, determine the random forces on the prey,
     % and determine the viscous forces on the prey
+    
+    
+
 
     amiapredator = false;
     Fy = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey);
-    Fymag = sqrt(dot(Fy,Fy)); % Prevent prey from cheating....
+    Fymag = sqrt(dot(Fy,Fy));
     if (Fymag>Fymax)
         Fy=Fy*Fymax/Fymag;
     end
     if (Ey<=0)  % Out of fuel!
         Fy = [0;0];
     end
-
+    
     Fyrand = Fyrand_magnitude*compute_random_force(t,force_table_prey); % Random force on prey
-    Fyvisc = -norm(vy)*vy*c;   % Drag force on prey
-    Fygrav = -my*g*[0;1];      % Gravity force on prey
+    Fyvisc = -norm(vy)*vy*c; 
+    Fygrav = -my*g*[0;1];      % Gravity force on predator
     Fytotal = Fy+Fyrand+Fyvisc+Fygrav;  % Total force on predator
 
-    %       If prey is on ground and stationary, and resultant vertical force < 0, set force on prey to zero
+    %       If predator is on ground and stationary, and resultant vertical force < 0, set force on predator to zero
     if (py(2)<=0 && vy(2)<=0 && Fytotal(2)<0)
         Fytotal = [0;0];
     end
 
     dEydt = -Eburnrate_y*norm(Fy)^(3/2);
+    
+ 
+    
+
 
     dwdt = [vr;vy;Frtotal/mr;Fytotal/my;dErdt;dEydt];
 
@@ -166,7 +171,7 @@ end
     
 function [continue_running,initial_w,start_time] = handle_event(event_time,event_sol,event_index)
 
-   
+    
     predator_crash_limit = 15; % Predator max landing speed to survive
     prey_crash_limit = 8; % Prey max landing speed to survive
     Max_fuel_r = 500000; % Max stored energy for predator
@@ -206,31 +211,31 @@ function [continue_running,initial_w,start_time] = handle_event(event_time,event
             disp('Prey landed & refueled!')
         end
     end
-  
-    end
+    
+    
+end
     
 %% CHANGE THE NAME OF THE FUNCTION TO A UNIQUE GROUP NAME BEFORE SUBMITTING    
- function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
+function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
 
 
 % PLEASE FILL OUT THE INFORMATION BELOW WHEN YOU SUBMIT YOUR CODE
 % Test time and place: Enter the time and room for your test here 
-% Group members: Cameron Curney, Ian Balaguera, Isabella Godlis, Mageean
-% Brown
+% Group members: list the names of your group members here
 
 
 %   t: Time
-   Frmax = 1.3*mr*g %Max force that can act on the predator
-   Fymax = 1.4*my*g %Max force that can act on the prey
+%   Frmax: Max force that can act on the predator
+%   Fymax: Max force that can act on th eprey
 %   amiapredator: Logical variable - if amiapredator is true,
 %   the function must compute forces acting on a predator.
 %   If false, code must compute forces acting on a prey.
- %  pr =  %2D column vector with current position of predator eg pr = [x_r;y_r]
- %  vr =  %column vector with current velocity of predator eg vr= [vx_r;vy_r]
- %  Er =  %energy remaining for predator
- %  py =  %2D column vector with current position of prey py = [x_prey;y_prey]
- %  vy =  %2D column vector with current velocity of prey py = [vx_prey;vy_prey]
- %  Ey = %energy remaining for prey
+%   pr - 2D column vector with current position of predator eg pr = [x_r;y_r]
+%   vr - 2D column vector with current velocity of predator eg vr= [vx_r;vy_r]
+%   Er - energy remaining for predator
+%   py - 2D column vector with current position of prey py = [x_prey;y_prey]
+%   vy - 2D column vector with current velocity of prey py = [vx_prey;vy_prey]
+%   Ey - energy remaining for prey
 %   F - 2D column vector specifying the force to be applied to the object
 %   that you wish to control F = [Fx;Fy]
 %   The direction of the force is arbitrary, but if the
@@ -246,31 +251,40 @@ function [continue_running,initial_w,start_time] = handle_event(event_time,event
     Max_fuel_r = 500000; % Max stored energy for predator
     Max_fuel_y = 50000;  % Max stored energy for prey
 
-    %
-    if (amiapredator)
+  %
+  if (amiapredator)
     % Code to compute the force to be applied to the predator
-
-    F = Frmax*[0;1];
-    %refueling 
-       hcrit = ((225-(vr(2))^2)/(2*-g));  %critical height
-        if (Er<(Eburnrate_r*((15-vr(2))/-g))) %fuel needed to not crash
-        F = [0,0];
-        end
-        if (pr(2)<=hcrit) 
-    F = Frmax*[0;1];
-        end
-
-    if (Er<=0)  % Out of fuel!
-        F = [0;0];
+   
+     
+    dt=8;
+    if (norm(py-pr)<15)
+        dt=2;
     end
+%     if (py(2)==0&&py(1)==0)
+%         F=[-1;0];
+%     end
+    F=py+dt*vy-(pr+dt*vr);%
+    F=Frmax*F/norm(F);
+   
+  
+   
+        
+      
+ 
+  else
+%     Code to compute the force to be applied to the prey
+    if (norm(py-pr)<50)&&(norm(py-pr)>20)
+       
+        
+        F=Fymax*[-vy(1);-vy(2)];
+        
     else
-    % Code to compute the force to be applied to the prey
-
-    F = Fymax*[0;1];
-
-    
-    
+    F=[sin(t);2+cos(t)];
+    F=Fymax*(F/norm(F));
     end
+
+  
+   end
   
 end
 %%
