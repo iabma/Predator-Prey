@@ -12,7 +12,7 @@ function predator_prey
    force_table_prey = rand(51,2)-0.5;
    force_table_predator = rand(51,2)-0.5;
 
-   options = odeset('Events',@event,'RelTol',0.001);
+   options = odeset('Events',@event,'RelTol',0.005);
    
    initial_w = [500,0,0,0,0,0,0,0,Initial_fuel_r,Initial_fuel_y]; % Initial position/velocity/energy  
    
@@ -30,8 +30,7 @@ function predator_prey
          tspan = [start_time,250];
        end
 %      ODE45 behaves strangely for this problem so we use the more accurate ode113       
-       [time_stage,sol_stage,time_event,sol_event,index_event] = ode113(@(t,w) eom(t,w,force_table_predator,force_table_prey,...
-           @(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey) compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)), ...
+       [time_stage,sol_stage,time_event,sol_event,index_event] = ode113(@(t,w) eom(t,w,force_table_predator,force_table_prey), ...
            tspan,initial_w,options);
        % Store the solution produced by ode113 for plotting
        time_vals = [time_vals;time_stage];
@@ -58,7 +57,7 @@ function predator_prey
 
 
 end
-function dwdt = eom(t,w,force_table_predator,force_table_prey,force_computer)
+function dwdt = eom(t,w,force_table_predator,force_table_prey)
 
     % Extract the position and velocity variables from the vector w
     % Note that this assumes the variables are stored in a particular order in w.
@@ -84,7 +83,7 @@ function dwdt = eom(t,w,force_table_predator,force_table_prey,force_computer)
 
     % Compute all the forces on the predator
     amiapredator = true;
-    Fr = force_computer(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey);
+    Fr = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey);
     Frmag = sqrt(dot(Fr,Fr)); % Prevent prey from cheating....
     if (Frmag>Frmax)
         Fr=Fr*Frmax/Frmag;
@@ -108,28 +107,35 @@ function dwdt = eom(t,w,force_table_predator,force_table_prey,force_computer)
     % Write similar code below to call your compute_f_groupname function to
     % compute the force on the prey, determine the random forces on the prey,
     % and determine the viscous forces on the prey
+    
+    
+
 
     amiapredator = false;
-    Fy = force_computer(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey);
-    Fymag = sqrt(dot(Fy,Fy)); % Prevent prey from cheating....
+    Fy = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey);
+    Fymag = sqrt(dot(Fy,Fy));
     if (Fymag>Fymax)
         Fy=Fy*Fymax/Fymag;
     end
     if (Ey<=0)  % Out of fuel!
         Fy = [0;0];
     end
-
+    
     Fyrand = Fyrand_magnitude*compute_random_force(t,force_table_prey); % Random force on prey
-    Fyvisc = -norm(vy)*vy*c;   % Drag force on prey
-    Fygrav = -my*g*[0;1];      % Gravity force on prey
+    Fyvisc = -norm(vy)*vy*c; 
+    Fygrav = -my*g*[0;1];      % Gravity force on predator
     Fytotal = Fy+Fyrand+Fyvisc+Fygrav;  % Total force on predator
 
-    %       If prey is on ground and stationary, and resultant vertical force < 0, set force on prey to zero
+    %       If predator is on ground and stationary, and resultant vertical force < 0, set force on predator to zero
     if (py(2)<=0 && vy(2)<=0 && Fytotal(2)<0)
         Fytotal = [0;0];
     end
 
     dEydt = -Eburnrate_y*norm(Fy)^(3/2);
+    
+ 
+    
+
 
     dwdt = [vr;vy;Frtotal/mr;Fytotal/my;dErdt;dEydt];
 
@@ -141,10 +147,10 @@ function dwdt = eom(t,w,force_table_predator,force_table_prey,force_computer)
     %
     persistent percentcompleted % A persistent variable retains its value after the function has completed
     if (isempty(percentcompleted))
-        percentcompleted = false(1,101);
+        percentcompleted = false(1,11);
     end
-    ii = floor(t/2.5)+1;
-    if mod(floor(t*4),10)==0
+    ii = floor(t/25)+1;
+    if mod(floor(t/2.5),10)==0
         if (~percentcompleted(ii))
             fprintf('%d %s \n',floor(t/2.5),'% complete')
             percentcompleted(ii) = true;
@@ -244,26 +250,13 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     prey_crash_limit = 8; % Prey max landing speed to survive
     Max_fuel_r = 500000; % Max stored energy for predator
     Max_fuel_y = 50000;  % Max stored energy for prey
-    hcriticalr = (0.17)*(vr(2)^2 - 100);
-    hcriticaly = (0.17)*(vy(2)^2 - 49);
+
+  %
+  if (amiapredator)
+    % Code to compute the force to be applied to the predator
+   
     
-    %
-    if (amiapredator)
-        % Code to compute the force to be applied to the predator
- 
-       if(Er < 0.2*Max_fuel_r) %check the fuel
-
-           %land & refuel 
-           if pr(2) > hcriticalr 
-               F = Frmax*[0;0];
-           else 
-               F = Frmax*[0;1];
-               disp ("Predator Refueled")
-           end 
-
-
-       else 
-          
+     
     dt=8;
     if (norm(py-pr)<15)
         dt=2;
@@ -273,133 +266,28 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
 %     end
     F=py+dt*vy-(pr+dt*vr);%
     F=Frmax*F/norm(F);
-
-       end 
- 
-    else
-        % Code to compute the force to be applied to the prey
-
-        % define constant parameters
-        r_direction_samples = 16;
-        y_direction_samples = 2;
-        steps_into_future = 1;
-
-        fast_version = false;
-        version = 1;
-
-        % find current direction of predator's movement
-        if (vr == zeros(2,1))
-            r_current_dir = [0;0];
-        else
-            r_current_dir = vr / norm(vr);
-        end
-        % find current direction of prey's movement
-        if (vy == zeros(2,1))
-            y_current_dir = [0;0];
-        else
-            y_current_dir = vy / norm(vy);
-        end
-
-        % create direction arrays from samples
-        r_angles = linspace(0,2*pi,r_direction_samples + 1);
-        r_angles = r_angles(1:end-1) + acos(r_current_dir(1));
-        r_directions = [cos(r_angles); sin(r_angles)];
-        r_forces = r_directions .* Frmax;
-
-        y_angles = linspace(0,2*pi,y_direction_samples + 1);
-        y_angles = y_angles(1:end-1) + acos(y_current_dir(1));
-        y_directions = [r_current_dir(1),-r_current_dir(1);-r_current_dir(2),r_current_dir(2)];%[cos(y_angles); sin(y_angles)];
-        y_forces = y_directions .* Fymax;
-
-        r_future_pos = r_directions + pr + vr;
-        y_future_pos = y_directions + py;
-
-        switch version
-            case 1
-                if (fast_version == false)
-                    % calculate potential positions of predator in future
-                    force_table_predator = rand(51,2)-0.5;
-
-                    tspan = [0,steps_into_future];
-                    options = odeset('Events',@event,'RelTol',0.01);
-
-                    % predator position calculations
-
-                    r_initial_w = [pr(1),pr(2),vr(1),vr(2),Er]; % Current position/velocity/energy
-                    r_positions = zeros(size(r_forces,1),size(r_forces,2));
-                    for i = 1 : r_direction_samples   
-                        [time_steps,sol_steps] = ode113(@(t_,w) predator_eom(t_,w,force_table_predator,r_forces(:,i)),tspan,r_initial_w,options);
-                        r_positions(:,i) = sol_steps(end,1:2)';
-                    end
-
-                    r_future_pos = r_positions;
-                end
-
-                % comment this
-
-                differences = zeros(1,r_direction_samples);
-                for r = 1 : r_direction_samples
-                    for y = 1 : y_direction_samples
-                        differences(r,y) = norm(y_future_pos(:,y) - r_future_pos(:,r));
-                    end
-                end
-
-                [min_r, r] = min(differences);
-                [max_y, y] = max(min_r);
-                norm(py - pr);
-                y_directions(:,y);
-                F = y_forces(:,y);
-            otherwise
-                F = [0;0];
-        end
+   
+  
+   
         
-        if (pr(2) < 50)
-            F = [F(1);1*Fymax]; % fix to be a gradient and influenced by calcs
-        end
-    end
-end
-
-% essentially a duplicate of the predator parts of eom()
-function dwdt = predator_eom(t,w,force_table_predator,applied_force)
-
-    % Extract the position and velocity variables from the vector w
-    % Note that this assumes the variables are stored in a particular order in w.
+      
  
-    pr = w(1:2); % Predator position (2D column vetor)
-    vr = w(3:4); % Predator velocity 
-    Er = w(5); % Energy remaining for predator
-
-    %      Constants given in the project description
-    g = 9.81;
-    mr = 100; % Mass of predator, in kg
-    Frmax = 1.3*mr*g; % Max force on predator, in Newtons
-    c = 0.2; % Viscous drag coeft, in N s/m
-    Eburnrate_r = 0.1;
-
-    % Compute all the forces on the predator
-    Fr = applied_force;
-    Frmag = sqrt(dot(Fr,Fr)); % Prevent prey from cheating....
-    if (Frmag>Frmax)
-        Fr=Fr*Frmax/Frmag;
-    end
-    if (Er<=0)  % Out of fuel!
-        Fr = [0;0];
+  else
+%     Code to compute the force to be applied to the prey
+    if (norm(py-pr)<50)&&(norm(py-pr)>20)
+       
+        
+        F=Fymax*[-vy(1);-vy(2)];
+        
+    else
+    F=[sin(t);2+cos(t)];
+    F=Fymax*(F/norm(F));
     end
 
-    Frvisc = -norm(vr)*vr*c;   % Drag force on predator
-    Frgrav = -mr*g*[0;1];      % Gravity force on predator
-    Frtotal = Fr+Frvisc+Frgrav;  % Total force on predator
-
-    %       If predator is on ground and stationary, and resultant vertical force < 0, set force on predator to zero
-    if (pr(2)<=0 && vr(2)<=0 && Frtotal(2)<0)
-        Frtotal = [0;0];
-    end
-
-    dErdt = -Eburnrate_r*norm(Fr)^(3/2);
-
-    dwdt = [vr;Frtotal/mr;dErdt];
+  
+   end
+  
 end
-
 %%
 function F = compute_random_force(t,force_table)
 % Computes value of fluctuating random force at time t, where 0<t<250.
@@ -408,7 +296,7 @@ function F = compute_random_force(t,force_table)
 % force_table = rand(251,2)-0.5;
 % The force is in Newtons – if you use another system of units you
 % must convert.
-F = [interp1(0:5:250,force_table(:,1),t);interp1(0:5:250,force_table(:,2),t)];
+F = [interp1([0:5:250],force_table(:,1),t);interp1([0:5:250],force_table(:,2),t)];
 end
 
 function animate_projectiles(t,sols)
@@ -456,3 +344,6 @@ for i = 1:length(t)
     pause(0.1);
 end
 end
+
+
+

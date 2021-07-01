@@ -254,7 +254,6 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
   %
   if (amiapredator)
     % Code to compute the force to be applied to the predator
-   
      
     dt=8;
     if (norm(py-pr)<15)
@@ -265,12 +264,20 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
 %     end
     F=py+dt*vy-(pr+dt*vr);%
     F=Frmax*F/norm(F);
-   
-  
-   
-        
-      
+    
+    % refueling
+    hcrit = ((225-(vr(2))^2)/(2*-g));  %critical height 
+    if (Er<(Eburnrate_r*((15-vr(2))/-g))) %fuel needed to not crash 
+        F = [0,0]; 
+    end 
+    if (pr(2)<=hcrit)  
+         F = Frmax*[0;1]; 
+    end
  
+    if (Er<=0)  % Out of fuel! 
+        F = [0;0]; 
+    end 
+    
   else
 %     Code to compute the force to be applied to the prey
     if (norm(py-pr)<50)&&(norm(py-pr)>20)
