@@ -122,9 +122,9 @@ function dwdt = eom(t,w,force_table_predator,force_table_prey)
     end
     
     Fyrand = Fyrand_magnitude*compute_random_force(t,force_table_prey); % Random force on prey
-    Fyvisc = -norm(vy)*vy*c; 
-    Fygrav = -my*g*[0;1];      % Gravity force on predator
-    Fytotal = Fy+Fyrand+Fyvisc+Fygrav;  % Total force on predator
+    Fyvisc = -norm(vy)*vy*c; % Drag force on prey
+    Fygrav = -my*g*[0;1];      % Gravity force on prey
+    Fytotal = Fy+Fyrand+Fyvisc+Fygrav;  % Total force on prey
 
     %       If predator is on ground and stationary, and resultant vertical force < 0, set force on predator to zero
     if (py(2)<=0 && vy(2)<=0 && Fytotal(2)<0)
@@ -250,8 +250,20 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     prey_crash_limit = 8; % Prey max landing speed to survive
     Max_fuel_r = 500000; % Max stored energy for predator
     Max_fuel_y = 50000;  % Max stored energy for prey
+    c = 0.2; % Viscous drag coeft, in N s/m
+    force_table_prey = rand(51,2)-0.5;
+    force_table_predator = rand(51,2)-0.5;
     Eburnrate_r = 0.1; % Fuel burn rate for predator
     Eburnrate_y = 0.2; %Fuel burn rate for prey
+    Frrand_magnitude = 0.4*mr*g; % Magnitude of random force on predator
+    Fyrand_magnitude = 0.4*my*g; % Magnitude of random force on prey
+    Frrand = Frrand_magnitude*compute_random_force(t,force_table_predator); % Random force on predator
+    Frvisc = -norm(vr)*vr*c;   % Drag force on predator
+    Frgrav = -mr*g*[0;1];      % Gravity force on predator
+    Fyrand = Fyrand_magnitude*compute_random_force(t,force_table_prey); % Random force on prey
+    Fyvisc = -norm(vy)*vy*c; % Drag force on prey
+    Fygrav = -my*g*[0;1];      % Gravity force on prey
+    
 
   %
   if (amiapredator)
@@ -268,12 +280,20 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     F=Frmax*F/norm(F);
     
     % refueling for predator
-    hcritr = ((225-(vr(2))^2)/(2*-g));  %critical height for predator
-    if (Er<(Eburnrate_r*((15-vr(2))/-g))) %fuel needed to not crash 
-        F = [0,0]; 
+    ar = (Frmax*[0;1]+Frrand+Frvisc+Frgrav)/my; %acceleration when maximum thrust is applied vertically
+    hcritr = ((225-(vr(2))^2)/(2*ar));  %critical height for prey
+    if (Er<=(Eburnrate_r*((15-vr(2))/ar))) %fuel needed to not crash 
+        if (py(2)>=hcritr)
+        F = [0,0];
+        
+        end 
     end 
-    if (pr(2)<=hcritr)  
-         F = Frmax*[0;1]; 
+    if (Er<=(Eburnrate_r*((15-vr(2))/ar)) )
+        if ((pr(2)<=hcritr)) 
+         F = Frmax*[0;1];
+
+  
+        end
     end
  
     
@@ -290,15 +310,20 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     end
     
     % refueling for prey
-    hcrity = ((64-(vy(2))^2)/(2*-g));  %critical height for predator
-    if (Ey<(Eburnrate_y*((15-vy(2))/-g))) %fuel needed to not crash 
+    ay = (Fymax*[0;1]+Fyrand+Fyvisc+Fygrav)/my; %acceleration when maximum thrust is applied vertically
+    hcrity = ((64-(vy(2))^2)/(2*ay));  %critical height for prey
+    if (Ey<=(Eburnrate_y*((8-vy(2))/ay))) 
+        if (py(2)>=hcrity) %fuel needed to not crash 
         F = [0,0]; 
-    end 
-    if (py(2)<=hcrity)  
+        end 
+    end
+    if (Ey<=(Eburnrate_y*((8-vy(2))/ay))) 
+        if (py(2)<=hcrity)  
          F = Fymax*[0;1];
 
   
-   end
+        end
+    end
   
   end
 end
