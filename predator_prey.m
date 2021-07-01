@@ -268,16 +268,60 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
   %
   if (amiapredator)
     % Code to compute the force to be applied to the predator
-     
-    dt=8;
-    if (norm(py-pr)<15)
-        dt=2;
-    end
-%     if (py(2)==0&&py(1)==0)
-%         F=[-1;0];
-%     end
-    F=py+dt*vy-(pr+dt*vr);%
-    F=Frmax*F/norm(F);
+   r_direct_option=16;%this is the number of selections for the direction of the Prey and Pred
+   y_direct_option=16;
+   
+   %this checks what the current direction of the prey and predator is
+   if(vr==zeros(2,1))
+       r_current_dir=[0;0];
+   else
+       r_current_dir=vr/norm(vr);
+   end
+   
+   if (vy==zeros(2,1))
+       y_current_dir=[0;0];
+   else
+       y_current_dir=vy/norm(vy);
+   end
+   
+   %this creates the 16 potential vector movements for pred
+   r_angles=linspace(0,2*pi,r_direct_option+1);
+   r_angles= r_angles(1:end-1)+acos(r_current_dir(1));
+   r_directions=[cos(r_angles); sin(r_angles)];
+  
+   %this creates the 16 potential vector movements for prey
+   y_angles=linspace(0,2*pi,y_direct_option+1);
+   y_angles=y_angles(1:end-1)+acos(y_current_dir(1));
+   y_directions=[cos(y_angles);sin(y_angles)];
+   
+   %calculates what the future position of both prey and pred will be
+   r_future_pos = r_directions + pr + vr;
+   y_future_pos= y_directions +py + vy;
+   %takes all 16 of the points and averages them to find a ball park
+   %position
+   pr_opt=[mean(r_future_pos(1,:));mean(r_future_pos(2,:))];
+   py_opt=[mean(y_future_pos(1,:));mean(y_future_pos(2,:))];
+
+%decides if the position is at a certain threshold and the speed is below a
+%above a certain threshold the predator will slow
+dt=8;
+   if(pr(2)<50&&vr(2)>15)
+       F=py+dt*vy-(pr+dt*vr);
+       F=14*F/norm(F);
+       
+   else
+       
+
+    
+        
+%finds the unit vector and uses the max predator F of the two average positions of the predator and
+%prey
+    F=py_opt-pr_opt;
+    
+   F=Frmax*F/norm(F);
+  end
+   
+        
     
     % refueling for predator
     vertical_crash_limit = sqrt(predator_crash_limit^2 - vr(1)^2);
@@ -285,6 +329,7 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     if (pr(2) > hcrit && hcrit > 0)
         crit_speed = - sqrt(norm(vr)^2 + 2*g*(pr(2) - hcrit));
         burn_time = (vertical_crash_limit - crit_speed) / (Frmax / mr - g);
+        crit_fuel = Eburnrate_r * Frmax^(3/2) * burn_time;
         if (Er <= crit_fuel + .05 * Max_fuel_r) %fuel needed to not crash 
             disp("low fuel");
             if (pr(2) <= hcrit)
@@ -392,6 +437,7 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     if (py(2) > hcrit && hcrit > 0)
         crit_speed = - sqrt(norm(vy)^2 + 2*g*(py(2) - hcrit));
         burn_time = (vertical_crash_limit - crit_speed) / (Fymax / my - g);
+        crit_fuel = Eburnrate_y * Fymax^(3/2) * burn_time;
         if (Ey <= crit_fuel + .05 * Max_fuel_y) %fuel needed to not crash 
             disp("low fuel");
             if (py(2) <= hcrit)

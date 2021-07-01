@@ -266,6 +266,7 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
         if (pr(2) > hcrit && hcrit > 0)
             crit_speed = - sqrt(norm(vr)^2 + 2*g*(pr(2) - hcrit));
             burn_time = (vertical_crash_limit - crit_speed) / (Frmax / mr - g);
+            crit_fuel = Eburnrate_r * Frmax^(3/2) * burn_time;
             if (Er <= crit_fuel + .05 * Max_fuel_r) %fuel needed to not crash 
                 disp("low fuel");
                 if (pr(2) <= hcrit)
@@ -375,6 +376,7 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
         if (py(2) > hcrit && hcrit > 0)
             crit_speed = - sqrt(norm(vy)^2 + 2*g*(py(2) - hcrit));
             burn_time = (vertical_crash_limit - crit_speed) / (Fymax / my - g);
+            crit_fuel = Eburnrate_y * Fymax^(3/2) * burn_time;
             if (Ey <= crit_fuel + .05 * Max_fuel_y) %fuel needed to not crash 
                 disp("low fuel");
                 if (py(2) <= hcrit)
