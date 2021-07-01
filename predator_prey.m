@@ -299,15 +299,93 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     
   else
 %     Code to compute the force to be applied to the prey
-    if (norm(py-pr)<50)&&(norm(py-pr)>20)
-       
-        
-        F=Fymax*[-vy(1);-vy(2)];
-        
+    if (pr(2) < 50)
+        %disp("too low, going up");
+        F = [0;1*Fymax]; % fix to be a gradient and influenced by calcs
     else
-    F=[sin(t);2+cos(t)];
-    F=Fymax*(F/norm(F));
+        % define constant parameters
+        r_direction_samples = 16;
+        y_direction_samples = 2;
+        steps_into_future = 1;
+
+        fast_version = true;
+
+        % find current direction of predator's movement
+        if (vr == zeros(2,1))
+            r_current_dir = [0;0];
+        else
+            r_current_dir = vr / norm(vr);
+        end
+        % find current direction of prey's movement
+        if (vy == zeros(2,1))
+            y_current_dir = [0;0];
+        else
+            y_current_dir = vy / norm(vy);
+        end
+
+        % create direction arrays from samples
+        r_angles = linspace(0,2*pi,r_direction_samples + 1);
+        r_angles = r_angles(1:end-1);
+        r_offset = atan(r_current_dir(2) / r_current_dir(1));
+        if (~isnan(r_offset))
+            r_angles = r_angles + r_offset;
+        end
+        r_direction_weight = (cos(r_angles) + 1) ./ 2;
+        r_directions = [cos(r_angles) .* r_direction_weight; sin(r_angles) .* r_direction_weight];
+        r_forces = r_directions .* Frmax;
+
+        y_angles = linspace(0,2*pi,y_direction_samples + 1);
+        y_angles = y_angles(1:end-1);
+        if (~isnan(r_offset))
+            y_angles = y_angles + r_offset + pi;
+        end
+        r_current_dir;
+        y_directions = [cos(y_angles); sin(y_angles)];
+        y_forces = y_directions .* Fymax;
+
+        %pr
+        r_future_pos = r_directions + pr + vr;
+        y_future_pos = y_directions + py + vy;
+
+        if (fast_version == false)
+            % calculate potential positions of predator in future
+            force_table_predator = rand(51,2)-0.5;
+
+            tspan = [0,steps_into_future];
+            options = odeset('Events',@event,'RelTol',1);
+
+            % predator position calculations
+
+            r_initial_w = [pr(1),pr(2),vr(1),vr(2),Er]; % Current position/velocity/energy
+            r_positions = zeros(size(r_forces,1),size(r_forces,2));
+            for i = 1 : r_direction_samples   
+                [time_steps,sol_steps] = ode113(@(t_,w) predator_eom(t_,w,force_table_predator,r_forces(:,i)),tspan,r_initial_w,options);
+                r_positions(:,i) = sol_steps(end,1:2)';
+            end
+
+            r_future_pos = r_positions;
+        end
+
+        % comment this
+
+        differences = zeros(r_direction_samples,y_direction_samples);
+        for r = 1 : r_direction_samples
+            for y = 1 : y_direction_samples
+                differences(r,y) = norm(y_future_pos(:,y) - r_future_pos(:,r));
+            end
+        end
+
+        %differences
+        %[min_r, r] = min(differences);
+        min_r = min(differences);
+        [max_y, y] = max(min_r);
+        %min_r
+        %max_y
+        norm(py - pr);
+        y_directions(:,y);
+        F = y_forces(:,y);
     end
+        
     
     % refueling for prey
     ay = (Fymax*[0;1]+Fyrand+Fyvisc+Fygrav)/my; %acceleration when maximum thrust is applied vertically
@@ -320,12 +398,8 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     if (Ey<=(Eburnrate_y*((8-vy(2))/ay))) 
         if (py(2)<=hcrity)  
          F = Fymax*[0;1];
-<<<<<<< HEAD
 
-  
         end
-=======
->>>>>>> 3d9248374562ab062d55b0d81293017d7623acee
     end
   
   end

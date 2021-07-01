@@ -275,6 +275,10 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
                 pr(2);
                 hcrit;
                 if (pr(2) <= hcrit && norm(vr) > 0)
+                    Er
+                    (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time)
+                    pr(2)
+                    hcrit
                     disp("SUICIDE BURN");
                     direction = vr / norm(vr);
                     F = -direction .* Frmax; 
