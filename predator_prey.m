@@ -296,9 +296,7 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     end 
     if (py(2)<=hcrity)  
          F = Fymax*[0;1];
-
-  
-   end
+    end
   
   end
 end
