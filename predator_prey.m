@@ -250,6 +250,8 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     prey_crash_limit = 8; % Prey max landing speed to survive
     Max_fuel_r = 500000; % Max stored energy for predator
     Max_fuel_y = 50000;  % Max stored energy for prey
+    Eburnrate_r = 0.1; % Fuel burn rate for predator
+    Eburnrate_y = 0.2; %Fuel burn rate for prey
 
   %
   if (amiapredator)
@@ -265,18 +267,15 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     F=py+dt*vy-(pr+dt*vr);%
     F=Frmax*F/norm(F);
     
-    % refueling
-    hcrit = ((225-(vr(2))^2)/(2*-g));  %critical height 
+    % refueling for predator
+    hcritr = ((225-(vr(2))^2)/(2*-g));  %critical height for predator
     if (Er<(Eburnrate_r*((15-vr(2))/-g))) %fuel needed to not crash 
         F = [0,0]; 
     end 
-    if (pr(2)<=hcrit)  
+    if (pr(2)<=hcritr)  
          F = Frmax*[0;1]; 
     end
  
-    if (Er<=0)  % Out of fuel! 
-        F = [0;0]; 
-    end 
     
   else
 %     Code to compute the force to be applied to the prey
@@ -289,10 +288,19 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     F=[sin(t);2+cos(t)];
     F=Fymax*(F/norm(F));
     end
+    
+    % refueling for prey
+    hcrity = ((64-(vy(2))^2)/(2*-g));  %critical height for predator
+    if (Ey<(Eburnrate_y*((15-vy(2))/-g))) %fuel needed to not crash 
+        F = [0,0]; 
+    end 
+    if (py(2)<=hcrity)  
+         F = Fymax*[0;1];
 
   
    end
   
+  end
 end
 %%
 function F = compute_random_force(t,force_table)
