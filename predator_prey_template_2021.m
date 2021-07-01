@@ -261,32 +261,21 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
         F=Frmax*F/norm(F);
 
         % refueling
-        hcrit = (mr*vr(2)^2/2 + g*pr(2)) / (g + Frmax / mr);
-        %if (pr(2) > hcrit && hcrit > 0)
-            pr(2);
-            hcrit;
+        vertical_crash_limit = sqrt(predator_crash_limit^2 - vr(1)^2);
+        hcrit = (mr*vr(2)^2/2 + mr*g*pr(2) - mr*vertical_crash_limit^2/2) / Frmax;
+        if (pr(2) > hcrit && hcrit > 0)
             crit_speed = - sqrt(norm(vr)^2 + 2*g*(pr(2) - hcrit));
-            burn_time = (predator_crash_limit - crit_speed) / (Frmax / mr - g);
-            drop_time = (norm(vr) - crit_speed) / g;
-            Er;
-            (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time);
-            if (Er <= (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time) && hcrit > 0) %fuel needed to not crash 
-                disp("FUEL LMII");
-                pr(2);
-                hcrit;
-                if (pr(2) <= hcrit && norm(vr) > 0)
-                    Er
-                    (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time)
-                    pr(2)
-                    hcrit
+            burn_time = (vertical_crash_limit - crit_speed) / (Frmax / mr - g);
+            if (Er <= crit_fuel + .05 * Max_fuel_r) %fuel needed to not crash 
+                disp("low fuel");
+                if (pr(2) <= hcrit)
                     disp("SUICIDE BURN");
-                    direction = vr / norm(vr);
-                    F = -direction .* Frmax; 
+                    F = [0;1*Frmax]; 
                 else
                     F = [0;0]; 
                 end
             end
-        %end
+        end
         if (Er<=0)  % Out of fuel! 
             F = [0;0]; 
         end 

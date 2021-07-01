@@ -261,17 +261,31 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
         F=Frmax*F/norm(F);
 
         % refueling
-        hcrit = (mr*norm(vr)^2/2 + mr*g*pr(2) - mr*predator_crash_limit^2/2) / Frmax;
-        crit_velocity = sqrt(norm(vr)^2 + 2*g*(pr(2) - 
-        Eburnrate_r*((15-vr(2))/g);
-        if (Er<.2*Max_fuel_r) %fuel needed to not crash 
-            disp("FUEL LMII");
-            F = [0;0]; 
-        end 
-        if (pr(2)<=hcrit)  
-             F = Frmax*[0;1]; 
-        end
-
+        vertical_crash_limit = sqrt(predator_crash_limit^2 - vr(1)^2);
+        hcrit = (mr*vr(2)^2/2 + mr*g*pr(2) - mr*vertical_crash_limit^2/2) / Frmax;
+        %if (pr(2) > hcrit && hcrit > 0)
+            crit_speed = - sqrt(norm(vr)^2 + 2*g*(pr(2) - hcrit));
+            burn_time = (predator_crash_limit - crit_speed) / (Frmax / mr - g);
+            drop_time = (norm(vr) - crit_speed) / g;
+            Er;
+            (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time);
+            if (Er <= (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time) && hcrit > 0) %fuel needed to not crash 
+                disp("FUEL LMII");
+                pr(2);
+                hcrit;
+                if (pr(2) <= hcrit && norm(vr) > 0)
+                    Er
+                    (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time)
+                    pr(2)
+                    hcrit
+                    disp("SUICIDE BURN");
+                    direction = vr / norm(vr);
+                    F = -direction .* Frmax; 
+                else
+                    F = [0;0]; 
+                end
+            end
+        %end
         if (Er<=0)  % Out of fuel! 
             F = [0;0]; 
         end 
@@ -370,7 +384,7 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
         hcrity = ((64-(vy(2))^2)/(2*-g));  %critical height for predator
         if (Ey<(Eburnrate_y*((15-vy(2))/-g))) %fuel needed to not crash 
             disp("STOP DOING SHIT");
-            F = [0,0]; 
+            F = [0;0]; 
         end
         if (py(2)<=hcrity)  
              disp("EMEGRENCY BURN");
