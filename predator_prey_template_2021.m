@@ -244,118 +244,151 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     prey_crash_limit = 8; % Prey max landing speed to survive
     Max_fuel_r = 500000; % Max stored energy for predator
     Max_fuel_y = 50000;  % Max stored energy for prey
-    hcriticalr = (0.17)*(vr(2)^2 - 100);
-    hcriticaly = (0.17)*(vy(2)^2 - 49);
+    Eburnrate_r = 0.1;
+    Eburnrate_y = 0.2;
     
     %
     if (amiapredator)
-        % Code to compute the force to be applied to the predator
- 
-       if(Er < 0.2*Max_fuel_r) %check the fuel
+     
+        dt=8;
+        if (norm(py-pr)<15)
+            dt=2;
+        end
+    %     if (py(2)==0&&py(1)==0)
+    %         F=[-1;0];
+    %     end
+        F=py+dt*vy-(pr+dt*vr);%
+        F=Frmax*F/norm(F);
 
-           %land & refuel 
-           if pr(2) > hcriticalr 
-               F = Frmax*[0;0];
-           else 
-               F = Frmax*[0;1];
-               disp ("Predator Refueled")
-           end 
+        % refueling
+        hcrit = (mr*vr(2)^2/2 + g*pr(2)) / (g + Frmax / mr);
+        %if (pr(2) > hcrit && hcrit > 0)
+            pr(2);
+            hcrit;
+            crit_speed = - sqrt(norm(vr)^2 + 2*g*(pr(2) - hcrit));
+            burn_time = (predator_crash_limit - crit_speed) / (Frmax / mr - g);
+            drop_time = (norm(vr) - crit_speed) / g;
+            Er;
+            (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time);
+            if (Er <= (Eburnrate_r / 100 * Max_fuel_r) * (drop_time + burn_time) && hcrit > 0) %fuel needed to not crash 
+                disp("FUEL LMII");
+                pr(2);
+                hcrit;
+                if (pr(2) <= hcrit && norm(vr) > 0)
+                    disp("SUICIDE BURN");
+                    direction = vr / norm(vr);
+                    F = -direction .* Frmax; 
+                else
+                    F = [0;0]; 
+                end
+            end
+        %end
+        if (Er<=0)  % Out of fuel! 
+            F = [0;0]; 
+        end 
 
-
-       else 
-          
-    dt=8;
-    if (norm(py-pr)<15)
-        dt=2;
-    end
-%     if (py(2)==0&&py(1)==0)
-%         F=[-1;0];
-%     end
-    F=py+dt*vy-(pr+dt*vr);%
-    F=Frmax*F/norm(F);
-
-       end 
- 
     else
         % Code to compute the force to be applied to the prey
 
-        % define constant parameters
-        r_direction_samples = 16;
-        y_direction_samples = 2;
-        steps_into_future = 1;
-
-        fast_version = false;
-        version = 1;
-
-        % find current direction of predator's movement
-        if (vr == zeros(2,1))
-            r_current_dir = [0;0];
+        if (pr(2) < 50)
+            %disp("too low, going up");
+            F = [0;1*Fymax]; % fix to be a gradient and influenced by calcs
         else
-            r_current_dir = vr / norm(vr);
-        end
-        % find current direction of prey's movement
-        if (vy == zeros(2,1))
-            y_current_dir = [0;0];
-        else
-            y_current_dir = vy / norm(vy);
-        end
+            % define constant parameters
+            r_direction_samples = 16;
+            y_direction_samples = 2;
+            steps_into_future = 1;
 
-        % create direction arrays from samples
-        r_angles = linspace(0,2*pi,r_direction_samples + 1);
-        r_angles = r_angles(1:end-1) + acos(r_current_dir(1));
-        r_directions = [cos(r_angles); sin(r_angles)];
-        r_forces = r_directions .* Frmax;
+            fast_version = true;
 
-        y_angles = linspace(0,2*pi,y_direction_samples + 1);
-        y_angles = y_angles(1:end-1) + acos(y_current_dir(1));
-        y_directions = [r_current_dir(1),-r_current_dir(1);-r_current_dir(2),r_current_dir(2)];%[cos(y_angles); sin(y_angles)];
-        y_forces = y_directions .* Fymax;
+            % find current direction of predator's movement
+            if (vr == zeros(2,1))
+                r_current_dir = [0;0];
+            else
+                r_current_dir = vr / norm(vr);
+            end
+            % find current direction of prey's movement
+            if (vy == zeros(2,1))
+                y_current_dir = [0;0];
+            else
+                y_current_dir = vy / norm(vy);
+            end
 
-        r_future_pos = r_directions + pr + vr;
-        y_future_pos = y_directions + py;
+            % create direction arrays from samples
+            r_angles = linspace(0,2*pi,r_direction_samples + 1);
+            r_angles = r_angles(1:end-1);
+            r_offset = atan(r_current_dir(2) / r_current_dir(1));
+            if (~isnan(r_offset))
+                r_angles = r_angles + r_offset;
+            end
+            r_direction_weight = (cos(r_angles) + 1) ./ 2;
+            r_directions = [cos(r_angles) .* r_direction_weight; sin(r_angles) .* r_direction_weight];
+            r_forces = r_directions .* Frmax;
 
-        switch version
-            case 1
-                if (fast_version == false)
-                    % calculate potential positions of predator in future
-                    force_table_predator = rand(51,2)-0.5;
+            y_angles = linspace(0,2*pi,y_direction_samples + 1);
+            y_angles = y_angles(1:end-1);
+            if (~isnan(r_offset))
+                y_angles = y_angles + r_offset + pi;
+            end
+            r_current_dir;
+            y_directions = [cos(y_angles); sin(y_angles)];
+            y_forces = y_directions .* Fymax;
 
-                    tspan = [0,steps_into_future];
-                    options = odeset('Events',@event,'RelTol',0.01);
+            %pr
+            r_future_pos = r_directions + pr + vr;
+            y_future_pos = y_directions + py + vy;
 
-                    % predator position calculations
+            if (fast_version == false)
+                % calculate potential positions of predator in future
+                force_table_predator = rand(51,2)-0.5;
 
-                    r_initial_w = [pr(1),pr(2),vr(1),vr(2),Er]; % Current position/velocity/energy
-                    r_positions = zeros(size(r_forces,1),size(r_forces,2));
-                    for i = 1 : r_direction_samples   
-                        [time_steps,sol_steps] = ode113(@(t_,w) predator_eom(t_,w,force_table_predator,r_forces(:,i)),tspan,r_initial_w,options);
-                        r_positions(:,i) = sol_steps(end,1:2)';
-                    end
+                tspan = [0,steps_into_future];
+                options = odeset('Events',@event,'RelTol',1);
 
-                    r_future_pos = r_positions;
+                % predator position calculations
+
+                r_initial_w = [pr(1),pr(2),vr(1),vr(2),Er]; % Current position/velocity/energy
+                r_positions = zeros(size(r_forces,1),size(r_forces,2));
+                for i = 1 : r_direction_samples   
+                    [time_steps,sol_steps] = ode113(@(t_,w) predator_eom(t_,w,force_table_predator,r_forces(:,i)),tspan,r_initial_w,options);
+                    r_positions(:,i) = sol_steps(end,1:2)';
                 end
 
-                % comment this
+                r_future_pos = r_positions;
+            end
 
-                differences = zeros(1,r_direction_samples);
-                for r = 1 : r_direction_samples
-                    for y = 1 : y_direction_samples
-                        differences(r,y) = norm(y_future_pos(:,y) - r_future_pos(:,r));
-                    end
+            % comment this
+
+            differences = zeros(r_direction_samples,y_direction_samples);
+            for r = 1 : r_direction_samples
+                for y = 1 : y_direction_samples
+                    differences(r,y) = norm(y_future_pos(:,y) - r_future_pos(:,r));
                 end
+            end
 
-                [min_r, r] = min(differences);
-                [max_y, y] = max(min_r);
-                norm(py - pr);
-                y_directions(:,y);
-                F = y_forces(:,y);
-            otherwise
-                F = [0;0];
+            %differences
+            %[min_r, r] = min(differences);
+            min_r = min(differences);
+            [max_y, y] = max(min_r);
+            %min_r
+            %max_y
+            norm(py - pr);
+            y_directions(:,y);
+            F = y_forces(:,y);
         end
         
-        if (pr(2) < 50)
-            F = [F(1);1*Fymax]; % fix to be a gradient and influenced by calcs
+        % refueling for prey
+        hcrity = ((64-(vy(2))^2)/(2*-g));  %critical height for predator
+        if (Ey<(Eburnrate_y*((15-vy(2))/-g))) %fuel needed to not crash 
+            disp("STOP DOING SHIT");
+            F = [0;0]; 
         end
+        if (py(2)<=hcrity)  
+             disp("EMEGRENCY BURN");
+             F = Fymax*[0;1];
+        end
+        
+        F;
     end
 end
 

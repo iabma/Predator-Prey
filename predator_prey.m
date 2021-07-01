@@ -320,9 +320,12 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     if (Ey<=(Eburnrate_y*((8-vy(2))/ay))) 
         if (py(2)<=hcrity)  
          F = Fymax*[0;1];
+<<<<<<< HEAD
 
   
         end
+=======
+>>>>>>> 3d9248374562ab062d55b0d81293017d7623acee
     end
   
   end
