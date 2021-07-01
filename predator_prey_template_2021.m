@@ -278,8 +278,7 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
         end
         if (Er<=0)  % Out of fuel! 
             F = [0;0]; 
-        end 
-
+        end
     else
         % Code to compute the force to be applied to the prey
 
@@ -370,15 +369,21 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
             F = y_forces(:,y);
         end
         
-        % refueling for prey
-        hcrity = ((64-(vy(2))^2)/(2*-g));  %critical height for predator
-        if (Ey<(Eburnrate_y*((15-vy(2))/-g))) %fuel needed to not crash 
-            disp("STOP DOING SHIT");
-            F = [0;0]; 
-        end
-        if (py(2)<=hcrity)  
-             disp("EMEGRENCY BURN");
-             F = Fymax*[0;1];
+        % refueling
+        vertical_crash_limit = sqrt(prey_crash_limit^2 - vy(1)^2);
+        hcrit = (mr*vy(2)^2/2 + mr*g*pr(2) - mr*vertical_crash_limit^2/2) / Frmax;
+        if (py(2) > hcrit && hcrit > 0)
+            crit_speed = - sqrt(norm(vy)^2 + 2*g*(py(2) - hcrit));
+            burn_time = (vertical_crash_limit - crit_speed) / (Fymax / my - g);
+            if (Ey <= crit_fuel + .05 * Max_fuel_y) %fuel needed to not crash 
+                disp("low fuel");
+                if (py(2) <= hcrit)
+                    disp("SUICIDE BURN");
+                    F = [0;1*Fymax]; 
+                else
+                    F = [0;0]; 
+                end
+            end
         end
         
         F;

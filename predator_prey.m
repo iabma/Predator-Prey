@@ -280,25 +280,25 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
     F=Frmax*F/norm(F);
     
     % refueling for predator
-    ar = (Frmax*[0;1]+Frrand+Frvisc+Frgrav)/my; %acceleration when maximum thrust is applied vertically
-    hcritr = ((225-(vr(2))^2)/(2*ar));  %critical height for prey
-    if (Er<=(Eburnrate_r*((15-vr(2))/ar))) %fuel needed to not crash 
-        if (py(2)>=hcritr)
-        F = [0,0];
-        
-        end 
-    end 
-    if (Er<=(Eburnrate_r*((15-vr(2))/ar)) )
-        if ((pr(2)<=hcritr)) 
-         F = Frmax*[0;1];
-
-  
+    vertical_crash_limit = sqrt(predator_crash_limit^2 - vr(1)^2);
+    hcrit = (mr*vr(2)^2/2 + mr*g*pr(2) - mr*vertical_crash_limit^2/2) / Frmax;
+    if (pr(2) > hcrit && hcrit > 0)
+        crit_speed = - sqrt(norm(vr)^2 + 2*g*(pr(2) - hcrit));
+        burn_time = (vertical_crash_limit - crit_speed) / (Frmax / mr - g);
+        if (Er <= crit_fuel + .05 * Max_fuel_r) %fuel needed to not crash 
+            disp("low fuel");
+            if (pr(2) <= hcrit)
+                disp("SUICIDE BURN");
+                F = [0;1*Frmax]; 
+            else
+                F = [0;0]; 
+            end
         end
     end
- 
     
   else
 %     Code to compute the force to be applied to the prey
+
     if (pr(2) < 50)
         %disp("too low, going up");
         F = [0;1*Fymax]; % fix to be a gradient and influenced by calcs
@@ -385,20 +385,21 @@ function F = compute_f_mygroupname(t,Frmax,Fymax,amiapredator,pr,vr,Er,py,vy,Ey)
         y_directions(:,y);
         F = y_forces(:,y);
     end
-        
-    
-    % refueling for prey
-    ay = (Fymax*[0;1]+Fyrand+Fyvisc+Fygrav)/my; %acceleration when maximum thrust is applied vertically
-    hcrity = ((64-(vy(2))^2)/(2*ay));  %critical height for prey
-    if (Ey<=(Eburnrate_y*((8-vy(2))/ay))) 
-        if (py(2)>=hcrity) %fuel needed to not crash 
-        F = [0,0]; 
-        end 
-    end
-    if (Ey<=(Eburnrate_y*((8-vy(2))/ay))) 
-        if (py(2)<=hcrity)  
-         F = Fymax*[0;1];
 
+    % refueling
+    vertical_crash_limit = sqrt(prey_crash_limit^2 - vy(1)^2);
+    hcrit = (mr*vy(2)^2/2 + mr*g*pr(2) - mr*vertical_crash_limit^2/2) / Frmax;
+    if (py(2) > hcrit && hcrit > 0)
+        crit_speed = - sqrt(norm(vy)^2 + 2*g*(py(2) - hcrit));
+        burn_time = (vertical_crash_limit - crit_speed) / (Fymax / my - g);
+        if (Ey <= crit_fuel + .05 * Max_fuel_y) %fuel needed to not crash 
+            disp("low fuel");
+            if (py(2) <= hcrit)
+                disp("SUICIDE BURN");
+                F = [0;1*Fymax]; 
+            else
+                F = [0;0]; 
+            end
         end
     end
   
